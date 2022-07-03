@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:azure-service-bus-messaging="http://www.mulesoft.org/schema/mule/azure-service-bus-messaging" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/azure-service-bus-messaging http://www.mulesoft.org/schema/mule/azure-service-bus-messaging/current/mule-azure-service-bus-messaging.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="72f3b729-a7a9-42dd-abef-46da2e09eb56" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<azure-service-bus-messaging:config name="Azure_Service_Bus_Messaging_Connector_Config" doc:name="Azure Service Bus Messaging Connector Config" doc:id="3766ead2-7310-402a-b991-b58c9d52382a" >
+		<azure-service-bus-messaging:sas-connection namespace="mule-poc-j4" sharedAccessKeyName="RootManageSharedAccessKey" sharedAccessKey="L/NnkAD6zd9guLtUuMvT7cEnogDpnhrCUHmnAA+1U6I=" />
+	</azure-service-bus-messaging:config>
+	<flow name="test-actionsFlow" doc:id="a99f3469-f85e-48a5-9df3-2d27fb9ca712" >
+		<http:listener doc:name="Listener" doc:id="3ae2d286-e0f1-4e63-bef1-554a389643d9" config-ref="HTTP_Listener_config" path="/test/{oid}"/>
+		<set-variable value="#[correlationId]" doc:name="Set Variable" doc:id="b51c8403-62e9-4be7-981e-aa40fdf37fde" variableName="correlationId"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2f884f0b-2958-4ef9-a0c3-91f50a792df7" message="uriparamis- #[attributes.uriParams.oid]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2dd29689-62bd-4057-bc25-8790fbd00904" message="mainFlowAttributes #[attributes]"/>
+		<set-payload value='#["this is a test payload"]' doc:name="Set Payload" doc:id="252b3d9c-fcd4-4272-9513-ce9f34b713a5" />
+		<azure-service-bus-messaging:send destinationName="pocj4queue" doc:name="Send" doc:id="8e4fe892-0b7a-4fe0-940f-efc685a6e4fb" config-ref="Azure_Service_Bus_Messaging_Connector_Config" sendCorrelationStrategy="AUTO" correlationId="#[vars.correlationId]" sessionId="#[uuid()]">
+		</azure-service-bus-messaging:send>
+		<azure-service-bus-messaging:receive destinationName="responsequeue" doc:name="Receive" doc:id="db416e15-9664-4660-b5f2-d433b6c4204e" config-ref="Azure_Service_Bus_Messaging_Connector_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="d27aef7a-5c49-474a-8547-f317bc07917c" message="output of the queue is - #[payload]"/>
+	</flow>
+	<flow name="test-actionsFlow1" doc:id="db53a88e-c7d7-4e2e-8072-129d9ef4ba83" >
+		<azure-service-bus-messaging:message-listener ackMode="MANUAL" destinationName="pocj4queue" doc:name="Message listener" doc:id="48c1ff81-21d1-4fe7-8e9c-2d8329ed57e2" config-ref="Azure_Service_Bus_Messaging_Connector_Config">
+			<azure-service-bus-messaging:response correlationId="#[attributes.correlationId]" replyToSessionId="#[attributes.SessionId]"/>
+		</azure-service-bus-messaging:message-listener>
+		<logger level="INFO" doc:name="Logger" doc:id="0732e794-e44f-42c0-8223-220ccdaefcfc" message="#[payload]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="d26682d7-d0a2-45f5-9db9-d71028a13698" message="#[%dw 2.0&#10;output application/json&#10;---&#10;attributes]"/>
+		<set-variable value="1" doc:name="Set Variable" doc:id="aa30be72-df2c-4241-b995-20dd5c7d40b5" variableName="counter"/>
+		<azure-service-bus-messaging:send destinationName="responsequeue" doc:name="Send" doc:id="7255d43e-3eb7-4303-81f7-176d5598b97d" config-ref="Azure_Service_Bus_Messaging_Connector_Config">
+			<azure-service-bus-messaging:body ><![CDATA[#[vars.counter]]]></azure-service-bus-messaging:body>
+		</azure-service-bus-messaging:send>
+	
+</flow>
+</mule>
